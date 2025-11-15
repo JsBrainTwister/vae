@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Image Visualization with Parameter Sync</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .sync-status {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .sync-status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sync-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .sync-indicator.error {
+            background: #dc3545;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            background: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 5px;
+        }
+        
+        .main-content {
+            display: flex;
+            height: calc(100vh - 250px);
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            border-right: 2px solid #e9ecef;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+        
+        .image-list {
+            list-style: none;
+        }
+        
+        .image-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .image-item:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+        
+        .image-item.active {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+        
+        .image-item-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+        
+        .image-item-info {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .image-item-badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-top: 5px;
+        }
+        
+        .viewer {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+        
+        .viewer-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6c757d;
+        }
+        
+        .viewer-empty svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        .image-container {
+            text-align: center;
+        }
+        
+        .image-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #495057;
+        }
+        
+        .image-display {
+            max-width: 100%;
+            margin: 0 auto 30px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .image-display img {
+            max-width: 100%;
+            max-height: 600px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .controls {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+        }
+        
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .control-value {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #dee2e6;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            border: none;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .notification.success {
+            background: #28a745;
+        }
+        
+        .notification.error {
+            background: #dc3545;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Local Image Visualization</h1>
+            <p>Adjust brightness locally and sync parameters to server</p>
+        </div>
+        
+        <div class="sync-status">
+            <div class="sync-status-item">
+                <div class="sync-indicator" id="syncIndicator"></div>
+                <span id="syncStatusText">Connected</span>
+            </div>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Images</div>
+                    <div class="stat-value" id="imageCount">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Modified</div>
+                    <div class="stat-value" id="modifiedCount">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Total Syncs</div>
+                    <div class="stat-value" id="syncCount">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <h2>📁 Available Images</h2>
+                <ul class="image-list" id="imageList">
+                    <li style="color: #6c757d; padding: 15px;">Loading images...</li>
+                </ul>
+            </div>
+            
+            <div class="viewer" id="viewer">
+                <div class="viewer-empty">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <h3>Select an image to start</h3>
+                    <p>Choose an image from the sidebar to adjust its brightness</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentImage = null;
+        let images = [];
+        let brightnessValue = 1.0;
+        
+        // Load images on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadImages();
+            loadSyncStatus();
+            
+            // Refresh sync status every 5 seconds
+            setInterval(loadSyncStatus, 5000);
+        });
+        
+        function loadImages() {
+            fetch('/api/images')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        images = data.images;
+                        displayImageList(images);
+                        updateStats();
+                    } else {
+                        showError(data.message);
+                        const imageList = document.getElementById('imageList');
+                        imageList.innerHTML = `<li class="error-message">${data.message}</li>`;
+                    }
+                })
+                .catch(error => {
+                    showError('Failed to load images: ' + error.message);
+                });
+        }
+        
+        function displayImageList(images) {
+            const imageList = document.getElementById('imageList');
+            
+            if (images.length === 0) {
+                imageList.innerHTML = '<li style="color: #6c757d; padding: 15px;">No images found</li>';
+                return;
+            }
+            
+            imageList.innerHTML = images.map((image, index) => `
+                <li class="image-item" onclick="selectImage(${index})">
+                    <div class="image-item-name">${image.filename}</div>
+                    <div class="image-item-info">${formatFileSize(image.size)}</div>
+                    ${image.modifications && Object.keys(image.modifications).length > 0 
+                        ? '<span class="image-item-badge">Modified</span>' 
+                        : ''}
+                </li>
+            `).join('');
+        }
+        
+        function selectImage(index) {
+            currentImage = images[index];
+            brightnessValue = 1.0;
+            
+            // Update active state
+            document.querySelectorAll('.image-item').forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+            
+            displayImageViewer();
+        }
+        
+        function displayImageViewer() {
+            const viewer = document.getElementById('viewer');
+            const imageUrl = `/api/image/${encodeURIComponent(currentImage.filename)}`;
+            
+            viewer.innerHTML = `
+                <div class="image-container">
+                    <h2 class="image-title">${currentImage.filename}</h2>
+                    
+                    <div class="image-display">
+                        <img id="displayImage" src="${imageUrl}" alt="${currentImage.filename}">
+                    </div>
+                    
+                    <div class="controls">
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>✨ Brightness</span>
+                                <span class="control-value" id="brightnessDisplay">${brightnessValue.toFixed(2)}</span>
+                            </div>
+                            <input type="range" id="brightnessSlider" min="0" max="2" step="0.01" value="${brightnessValue}" oninput="adjustBrightness(this.value)">
+                        </div>
+                        
+                        <div class="button-group">
+                            <button class="btn-primary" onclick="syncToServer()">
+                                🔄 Sync to Server
+                            </button>
+                            <button class="btn-secondary" onclick="resetBrightness()">
+                                ↺ Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Apply initial brightness
+            applyBrightnessFilter();
+        }
+        
+        function adjustBrightness(value) {
+            brightnessValue = parseFloat(value);
+            document.getElementById('brightnessDisplay').textContent = brightnessValue.toFixed(2);
+            applyBrightnessFilter();
+        }
+        
+        function applyBrightnessFilter() {
+            const img = document.getElementById('displayImage');
+            if (img) {
+                img.style.filter = `brightness(${brightnessValue})`;
+            }
+        }
+        
+        function resetBrightness() {
+            brightnessValue = 1.0;
+            document.getElementById('brightnessSlider').value = brightnessValue;
+            document.getElementById('brightnessDisplay').textContent = brightnessValue.toFixed(2);
+            applyBrightnessFilter();
+        }
+        
+        function syncToServer() {
+            if (!currentImage) {
+                showError('No image selected');
+                return;
+            }
+            
+            const syncButton = event.target;
+            syncButton.disabled = true;
+            syncButton.innerHTML = '<span class="loading"></span> Syncing...';
+            
+            fetch('/api/sync_parameters', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    filename: currentImage.filename,
+                    brightness: brightnessValue
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showSuccess(`Parameters synced successfully! Brightness: ${data.brightness.toFixed(2)}`);
+                    loadSyncStatus();
+                    loadImages();
+                } else {
+                    showError('Failed to sync: ' + data.message);
+                }
+            })
+            .catch(error => {
+                showError('Sync failed: ' + error.message);
+            })
+            .finally(() => {
+                syncButton.disabled = false;
+                syncButton.innerHTML = '🔄 Sync to Server';
+            });
+        }
+        
+        function loadSyncStatus() {
+            fetch('/api/sync_status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        document.getElementById('modifiedCount').textContent = data.total_images_modified;
+                        document.getElementById('syncCount').textContent = data.total_modifications;
+                        
+                        // Update sync indicator
+                        const indicator = document.getElementById('syncIndicator');
+                        const statusText = document.getElementById('syncStatusText');
+                        indicator.classList.remove('error');
+                        statusText.textContent = 'Connected';
+                    } else {
+                        const indicator = document.getElementById('syncIndicator');
+                        const statusText = document.getElementById('syncStatusText');
+                        indicator.classList.add('error');
+                        statusText.textContent = 'Connection Error';
+                    }
+                })
+                .catch(error => {
+                    const indicator = document.getElementById('syncIndicator');
+                    const statusText = document.getElementById('syncStatusText');
+                    indicator.classList.add('error');
+                    statusText.textContent = 'Offline';
+                });
+        }
+        
+        function updateStats() {
+            document.getElementById('imageCount').textContent = images.length;
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+        
+        function showSuccess(message) {
+            showNotification(message, 'success');
+        }
+        
+        function showError(message) {
+            showNotification(message, 'error');
+        }
+        
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
