@@ -208,7 +208,16 @@ def clear_modifications():
 
 
 if __name__ == '__main__':
+    # For production, set DEBUG to False
+    # For development/testing, debug mode is enabled by default
+    DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() in ('true', '1', 'yes')
+    
     print(f"Starting Flask application...")
     print(f"Local data path: {LOCAL_DATA_PATH}")
     print(f"Server data path: {SERVER_DATA_PATH}")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    print(f"Debug mode: {DEBUG}")
+    
+    if DEBUG:
+        print("INFO: Debug mode is enabled for testing purposes")
+    
+    app.run(debug=DEBUG, host='0.0.0.0', port=5000)

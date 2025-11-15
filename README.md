@@ -184,7 +184,20 @@ SERVER_DATA_PATH = os.path.join(os.path.dirname(__file__), 'server_data')
 ### Port Configuration
 Change the port in `app.py`:
 ```python
-app.run(debug=True, host='0.0.0.0', port=5000)
+app.run(debug=DEBUG, host='0.0.0.0', port=5000)
+```
+
+### Debug Mode
+By default, debug mode is **disabled** for security in production. To enable debug mode for development:
+```bash
+export FLASK_DEBUG=True
+python app.py
+```
+
+For `app_test.py`, debug mode is enabled by default for testing purposes. To disable:
+```bash
+export FLASK_DEBUG=False
+python app_test.py
 ```
 
 ## Supported Image Formats
@@ -198,10 +211,13 @@ app.run(debug=True, host='0.0.0.0', port=5000)
 ## Security Considerations
 
 - The application runs locally by default
-- For production deployment, disable debug mode
-- Consider adding authentication for the sync endpoints
-- Validate and sanitize all file paths
-- Use HTTPS for remote deployments
+- **Debug mode is disabled by default in production (`app.py`)** for security
+- For production deployment:
+  - Always ensure `FLASK_DEBUG` is not set or set to `False`
+  - Consider adding authentication for the sync endpoints
+  - Validate and sanitize all file paths
+  - Use HTTPS for remote deployments
+- Test mode (`app_test.py`) has debug enabled for development convenience
 
 ## Troubleshooting
 
